@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from models.predict import predict_digit
+from models.storage import save_prediction
 
 app = Flask(__name__)
 
@@ -11,15 +12,38 @@ def home():
 	})
 
 
-@app.route("/predict", methods=["GET"])
+@app.route("/predict")
 def predict():
-	return jsonify(predict_digit())
 
-@app.route("/health", methods=["GET"])
+	result = predict_digit()
+
+	save_prediction(
+		result["digit"],
+		result["confidence"]
+	)
+
+	return jsonify(result)
+
+@app.route("/health")
 def health():
 	return jsonify({
 		"status": "healthy"
 	})
+
+@app.route("/history")
+def history():
+
+	import sqlite3
+
+	conn = sqlite3.connect("pixelwise.db")
+
+	rows = conn.execute(
+		"SELECT * FROM predictions"
+	).fetchall()
+
+	conn.close()
+
+	return jsonify(rows)
 
 @app.route("/echo", methods=["POST"])
 def echo():
